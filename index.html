@@ -124,6 +124,12 @@
       }
       
       async function generateQRCode(){
+        let contentIsBytes = document.getElementById("contentSelect").selectedIndex;
+        let base64_string = "";
+        if (contentIsBytes == 1) {
+          base64_string = await readFileAsBase64();
+        } 
+        console.log(base64_string)
         let mode = document.getElementById("modeSelect").selectedOptions[0].value;
         let encoding = document.getElementById("encodingSelect").selectedOptions[0].value;
         let version = document.getElementById("versionSelect").selectedOptions[0].value;
@@ -131,7 +137,9 @@
         let content = document.querySelector("textarea").value;
         try {
           let result = await pyodide.runPython(`
+            import base64
             import segno
+            
             mode = '`+mode+`'
             encoding = '`+encoding+`'
             if mode == "auto":
@@ -139,13 +147,17 @@
             content = '''`+content+`'''
             if mode == "byte":
                 content = content.encode(encoding)
-                print(encoding)
-                print(content)
+
+            base64_string = '''`+base64_string+`'''
+            if base64_string != '':
+                content = base64.b64decode(base64_string)
+
             version = `+version+`
             if version == 0:
                 version = None
             errorCorrectionLevel = '`+errorCorrectionLevel+`'
             print(errorCorrectionLevel)
+            print(content)
             qrcode = segno.make_qr(content,version=version,error=errorCorrectionLevel,mode=mode)
             import io
             buff = io.BytesIO()
@@ -163,6 +175,28 @@
           alert(error);
           throw error;
         }
+      }
+
+      function readFileAsBase64() {
+        return new Promise((resolve, reject) => {
+          let fileInput = document.getElementById("fileInput");
+          if (fileInput.files.length>0) {
+            let file = fileInput.files[0];
+            let fileReader = new FileReader();
+            fileReader.onload = function(e){
+              let dataURL = e.target.result;
+              let base64 = dataURL.substring(dataURL.indexOf(",")+1,dataURL.length);
+              resolve(base64);
+            };
+            fileReader.onerror = function () {
+              console.warn('oops, something went wrong.');
+              reject();
+            };
+            fileReader.readAsDataURL(file);
+          }else{
+            reject();
+          }
+        })
       }
     </script>
   </body>
