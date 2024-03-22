@@ -6,7 +6,9 @@
     <h2>QR Code Generator</h2>
     <label>
       Version:
-      <select id="versionSelect"></select>
+      <select id="versionSelect">
+        <option value="0">Auto</option>
+      </select>
     </label>
     <label>
       Error Correction Level
@@ -41,14 +43,19 @@
       </select>
     </label>
     <br/>
-    <textarea></textarea>
+    <textarea>Hello!</textarea>
     <input style="display:none" type="file" id="fileInput"/>
     <br/>
-    <button>Generate</button>
+    <button id="generateButton">Generate</button>
+    <div id="status"></div>
+    <div id="result">
+      <img id="qrcode"/>
+    </div>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
     <script type="text/javascript">
       let pyodide;
       window.onload = async function(){
+        updateStatus("Loading...");
         loadVersions();
         loadEncodings();
         document.getElementById("contentSelect").addEventListener("change",function(){
@@ -61,7 +68,17 @@
             document.querySelector("#fileInput").style.display = "";
           }
         })
+
+        document.getElementById("generateButton").addEventListener("click",function(){
+          generateQRCode();
+        })
+
         await initPyodide();
+        updateStatus("");
+      }
+
+      function updateStatus(info){
+        document.getElementById("status").innerText = info;
       }
 
       function loadEncodings(){
@@ -88,19 +105,25 @@
         const micropip = pyodide.pyimport("micropip");
         await micropip.install("segno");
       }
-
+      
       async function generateQRCode(){
+        let content = document.querySelector("textarea").value;
         let result = await pyodide.runPython(`
           import segno
-          qrcode = segno.make('Rain')
+          qrcode = segno.make_qr('''`+content+`''')
           import io
           buff = io.BytesIO()
           qrcode.save(buff, kind='svg')
           buff.getvalue().decode("utf-8") 
         `);
+        console.log(result)
+        var decoded = unescape(encodeURIComponent(result));
+        // Now we can use btoa to convert the svg to base64
+        var base64 = btoa(decoded);
+        var imgSource = `data:image/svg+xml;base64,${base64}`;
+        document.getElementById("qrcode").src = imgSource;
         return result;
       }
-      
     </script>
   </body>
 </html>
