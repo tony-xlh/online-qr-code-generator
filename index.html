@@ -1,6 +1,11 @@
 <html>
   <head>
     <meta charset="utf-8" />
+    <style>
+      #qrcode {
+        width:50px;
+      }
+    </style>
   </head>
   <body>
     <h2>QR Code Generator</h2>
@@ -33,6 +38,10 @@
     <label>
       Text Encoding in Byte Mode:
       <select id="encodingSelect"></select>
+    </label>
+    <label>
+      Image Width:
+      <input style="width:50px" type="number" value="50" id="widthInput"/>
     </label>
     <br/>
     <label>
@@ -71,6 +80,10 @@
 
         document.getElementById("generateButton").addEventListener("click",function(){
           generateQRCode();
+        })
+
+        document.getElementById("widthInput").addEventListener("change",function(){
+          document.getElementById("qrcode").style.width = this.value + "px";
         })
 
         await initPyodide();
@@ -117,10 +130,10 @@
           buff.getvalue().decode("utf-8") 
         `);
         console.log(result)
-        var decoded = unescape(encodeURIComponent(result));
+        let decoded = unescape(encodeURIComponent(result));
         // Now we can use btoa to convert the svg to base64
-        var base64 = btoa(decoded);
-        var imgSource = `data:image/svg+xml;base64,${base64}`;
+        let base64 = btoa(decoded);
+        let imgSource = `data:image/svg+xml;base64,${base64}`;
         document.getElementById("qrcode").src = imgSource;
         return result;
       }
