@@ -1,0 +1,230 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      .qrcode {
+        width:50px;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>QR Code Generator</h2>
+    <label>
+      Version:
+      <select id="versionSelect">
+        <option value="0">Auto</option>
+      </select>
+    </label>
+    <label>
+      Error Correction Level
+      <select id="errorCorrectionLevelSelect">
+        <option value="L">L(7%)</option>
+        <option value="M">M(15%)</option>
+        <option value="Q">Q(25%)</option>
+        <option value="H">H(30%)</option>
+      </select>
+    </label>
+    <label>
+      Mode:
+      <select id="modeSelect">
+        <option value="auto">Auto</option>
+        <option value="numeric">Numeric</option>
+        <option value="alphanumeric">Alphanumeric</option>
+        <option value="kanji">Kanji</option>
+        <option value="byte">Byte</option>
+        <option value="structuredappend">Structrued Append</option>
+      </select>
+    </label>
+    <br/>
+    <label>
+      Text Encoding in Byte Mode:
+      <select id="encodingSelect">
+      </select>
+    </label>
+    <label>
+      Image Width:
+      <input style="width:50px" type="number" value="50" id="widthInput"/>
+    </label>
+    <br/>
+    <label>
+      Expected QR Code count for Structed Append mode:
+      <input style="width:50px" type="number" value="2" id="countInput"/>
+    </label>
+    <br/>
+    <label>
+      Content:
+      <select id="contentSelect">
+        <option>Text</option>
+        <option>Bytes</option>
+      </select>
+    </label>
+    <br/>
+    <textarea>Hello!</textarea>
+    <input style="display:none" type="file" id="fileInput"/>
+    <br/>
+    <button id="generateButton">Generate</button>
+    <div id="status"></div>
+    <div id="result"></div>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
+    <script type="text/javascript">
+      let pyodide;
+      window.onload = async function(){
+        updateStatus("Loading...");
+        loadVersions();
+        loadEncodings();
+        document.getElementById("contentSelect").addEventListener("change",function(){
+          console.log(arguments)
+          if (this.selectedIndex === 0) {
+            document.querySelector("textarea").style.display = "";
+            document.querySelector("#fileInput").style.display = "none";
+          }else{
+            document.querySelector("textarea").style.display = "none";
+            document.querySelector("#fileInput").style.display = "";
+          }
+        })
+
+        document.getElementById("generateButton").addEventListener("click",function(){
+          generateQRCodes();
+        })
+
+        document.getElementById("widthInput").addEventListener("change",function(){
+          let qrcodes = document.getElementsByClassName("qrcode");
+          for (let index = 0; index < qrcodes.length; index++) {
+            const qrcode = qrcodes[index];
+            qrcode.style.width = this.value + "px";  
+          }
+        })
+
+        await initPyodide();
+        updateStatus("");
+      }
+
+      function updateStatus(info){
+        document.getElementById("status").innerText = info;
+      }
+
+      function loadEncodings(){
+        const encodingSelect = document.getElementById("encodingSelect");
+        const encodings = ["ascii","big5","big5hkscs","cp037","cp273","cp424","cp437","cp500","cp720","cp737","cp775","cp850","cp852","cp855","cp856","cp857","cp858","cp860","cp861","cp862","cp863","cp864","cp865","cp866","cp869","cp874","cp875","cp932","cp949","cp950","cp1006","cp1026","cp1125","cp1140","cp1250","cp1251","cp1252","cp1253","cp1254","cp1255","cp1256","cp1257","cp1258","euc_jp","euc_jis_2004","euc_jisx0213","euc_kr","gb2312","gbk","gb18030","hz","iso2022_jp","iso2022_jp_1","iso2022_jp_2","iso2022_jp_2004","iso2022_jp_3","iso2022_jp_ext","iso2022_kr","latin_1","iso8859_2","iso8859_3","iso8859_4","iso8859_5","iso8859_6","iso8859_7","iso8859_8","iso8859_9","iso8859_10","iso8859_11","iso8859_13","iso8859_14","iso8859_15","iso8859_16","johab","koi8_r","koi8_t","koi8_u","kz1048","mac_cyrillic","mac_greek","mac_iceland","mac_latin2","mac_roman","mac_turkish","ptcp154","shift_jis","shift_jis_2004","shift_jisx0213","utf_32","utf_32_be","utf_32_le","utf_16","utf_16_be","utf_16_le","utf_7","utf_8","utf_8_sig"];
+        let utf8Index = encodings.indexOf("utf_8");
+        for (let index = 0; index < encodings.length; index++) {
+          const encoding = encodings[index];
+          let option = new Option(encoding,encoding);
+          encodingSelect.appendChild(option);
+        }
+        encodingSelect.selectedIndex = utf8Index;
+      }
+
+      function loadVersions(){
+        const versionSelect = document.getElementById("versionSelect");
+        for (let index = 1; index <= 40; index++) {
+          const option = new Option(index,index);
+          versionSelect.appendChild(option);
+        }
+      }
+
+      async function initPyodide() {
+        pyodide = await loadPyodide();
+        await pyodide.loadPackage("micropip");
+        const micropip = pyodide.pyimport("micropip");
+        await micropip.install("segno");
+      }
+      
+      async function generateQRCodes(){
+        let contentIsBytes = document.getElementById("contentSelect").selectedIndex;
+        let base64_string = "";
+        if (contentIsBytes == 1) {
+          base64_string = await readFileAsBase64();
+        } 
+        console.log(base64_string)
+        let count = document.getElementById("countInput").value; 
+        let mode = document.getElementById("modeSelect").selectedOptions[0].value;
+        let encoding = document.getElementById("encodingSelect").selectedOptions[0].value;
+        let version = document.getElementById("versionSelect").selectedOptions[0].value;
+        let errorCorrectionLevel = document.getElementById("errorCorrectionLevelSelect").selectedOptions[0].value;
+        let content = document.querySelector("textarea").value;
+        try {
+          let result = await pyodide.runPython(`
+            import base64
+            import segno
+            
+            mode = '`+mode+`'
+            encoding = '`+encoding+`'
+            if mode == "auto":
+                mode = None
+            content = '''`+content+`'''
+            if mode == "byte":
+                content = content.encode(encoding)
+
+            base64_string = '''`+base64_string+`'''
+            if base64_string != '':
+                content = base64.b64decode(base64_string)
+
+            version = `+version+`
+            if version == 0:
+                version = None
+            errorCorrectionLevel = '`+errorCorrectionLevel+`'
+            print(errorCorrectionLevel)
+            print(content)
+            
+            qrcodes = []
+            qrcode_svgs = []
+            if mode == "structuredappend":
+                qrcode_seq = segno.make_sequence(content,version=version,error=errorCorrectionLevel, symbol_count=`+count+`)
+                for qrcode in qrcode_seq:
+                    qrcodes.append(qrcode)
+            else:
+                qrcode = segno.make_qr(content,version=version,error=errorCorrectionLevel,mode=mode)
+                qrcodes.append(qrcode)
+            import io
+            for qrcode in qrcodes:
+                buff = io.BytesIO()
+                qrcode.save(buff, kind='svg')
+                svg = buff.getvalue().decode("utf-8")
+                qrcode_svgs.append(svg)
+            qrcode_svgs
+          `);
+          let svgs = result.toJs();
+          let resultContainer = document.getElementById("result");
+          resultContainer.innerHTML = "";
+          for (let index = 0; index < svgs.length; index++) {
+            const svg = svgs[index];
+            let decoded = unescape(encodeURIComponent(svg));
+            // Now we can use btoa to convert the svg to base64
+            let base64 = btoa(decoded);
+            let imgSource = `data:image/svg+xml;base64,${base64}`;
+            let img = document.createElement("img");
+            img.src = imgSource;
+            img.className = "qrcode"
+            resultContainer.appendChild(img);
+          }
+        } catch (error) {
+          alert(error);
+          throw error;
+        }
+      }
+
+      function readFileAsBase64() {
+        return new Promise((resolve, reject) => {
+          let fileInput = document.getElementById("fileInput");
+          if (fileInput.files.length>0) {
+            let file = fileInput.files[0];
+            let fileReader = new FileReader();
+            fileReader.onload = function(e){
+              let dataURL = e.target.result;
+              let base64 = dataURL.substring(dataURL.indexOf(",")+1,dataURL.length);
+              resolve(base64);
+            };
+            fileReader.onerror = function () {
+              console.warn('oops, something went wrong.');
+              reject();
+            };
+            fileReader.readAsDataURL(file);
+          }else{
+            reject();
+          }
+        })
+      }
+    </script>
+  </body>
+</html>
