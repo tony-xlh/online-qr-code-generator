@@ -2,7 +2,7 @@
   <head>
     <meta charset="utf-8" />
     <style>
-      #qrcode {
+      .qrcode {
         width:50px;
       }
     </style>
@@ -59,9 +59,7 @@
     <br/>
     <button id="generateButton">Generate</button>
     <div id="status"></div>
-    <div id="result">
-      <img id="qrcode"/>
-    </div>
+    <div id="result"></div>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
     <script type="text/javascript">
       let pyodide;
@@ -81,7 +79,7 @@
         })
 
         document.getElementById("generateButton").addEventListener("click",function(){
-          generateQRCode();
+          generateQRCodes();
         })
 
         document.getElementById("widthInput").addEventListener("change",function(){
@@ -123,7 +121,7 @@
         await micropip.install("segno");
       }
       
-      async function generateQRCode(){
+      async function generateQRCodes(){
         let contentIsBytes = document.getElementById("contentSelect").selectedIndex;
         let base64_string = "";
         if (contentIsBytes == 1) {
@@ -158,19 +156,38 @@
             errorCorrectionLevel = '`+errorCorrectionLevel+`'
             print(errorCorrectionLevel)
             print(content)
-            qrcode = segno.make_qr(content,version=version,error=errorCorrectionLevel,mode=mode)
+            
+            qrcodes = []
+            qrcode_svgs = []
+            if mode == "structuredappend":
+                qrcode_seq = segno.make_sequence(content,version=version,error=errorCorrectionLevel, symbol_count=2)
+                for qrcode in qrcode_seq:
+                    qrcodes.append(qrcode)
+            else:
+                qrcode = segno.make_qr(content,version=version,error=errorCorrectionLevel,mode=mode)
+                qrcodes.append(qrcode)
             import io
-            buff = io.BytesIO()
-            qrcode.save(buff, kind='svg')
-            buff.getvalue().decode("utf-8") 
+            for qrcode in qrcodes:
+                buff = io.BytesIO()
+                qrcode.save(buff, kind='svg')
+                svg = buff.getvalue().decode("utf-8")
+                qrcode_svgs.append(svg)
+            qrcode_svgs
           `);
-          console.log(result)
-          let decoded = unescape(encodeURIComponent(result));
-          // Now we can use btoa to convert the svg to base64
-          let base64 = btoa(decoded);
-          let imgSource = `data:image/svg+xml;base64,${base64}`;
-          document.getElementById("qrcode").src = imgSource;
-          return result;
+          let svgs = result.toJs();
+          let resultContainer = document.getElementById("result");
+          resultContainer.innerHTML = "";
+          for (let index = 0; index < svgs.length; index++) {
+            const svg = svgs[index];
+            let decoded = unescape(encodeURIComponent(svg));
+            // Now we can use btoa to convert the svg to base64
+            let base64 = btoa(decoded);
+            let imgSource = `data:image/svg+xml;base64,${base64}`;
+            let img = document.createElement("img");
+            img.src = imgSource;
+            img.className = "qrcode"
+            resultContainer.appendChild(img);
+          }
         } catch (error) {
           alert(error);
           throw error;
