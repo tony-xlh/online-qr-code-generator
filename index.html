@@ -27,6 +27,7 @@
     <label>
       Mode:
       <select id="modeSelect">
+        <option value="auto">Auto</option>
         <option value="numeric">Numeric</option>
         <option value="alphanumeric">Alphanumeric</option>
         <option value="kanji">Kanji</option>
@@ -120,29 +121,38 @@
       }
       
       async function generateQRCode(){
+        let mode = document.getElementById("modeSelect").selectedOptions[0].value;
         let version = document.getElementById("versionSelect").selectedOptions[0].value;
         let errorCorrectionLevel = document.getElementById("errorCorrectionLevelSelect").selectedOptions[0].value;
         let content = document.querySelector("textarea").value;
-        let result = await pyodide.runPython(`
-          import segno
-          version = `+version+`
-          if version == 0:
-              version = None
-          errorCorrectionLevel = '`+errorCorrectionLevel+`'
-          print(errorCorrectionLevel)
-          qrcode = segno.make_qr('''`+content+`''',version=version,error=errorCorrectionLevel)
-          import io
-          buff = io.BytesIO()
-          qrcode.save(buff, kind='svg')
-          buff.getvalue().decode("utf-8") 
-        `);
-        console.log(result)
-        let decoded = unescape(encodeURIComponent(result));
-        // Now we can use btoa to convert the svg to base64
-        let base64 = btoa(decoded);
-        let imgSource = `data:image/svg+xml;base64,${base64}`;
-        document.getElementById("qrcode").src = imgSource;
-        return result;
+        try {
+          let result = await pyodide.runPython(`
+            import segno
+            mode = '`+mode+`'
+            if mode == "auto":
+                mode = None
+            version = `+version+`
+            if version == 0:
+                version = None
+            errorCorrectionLevel = '`+errorCorrectionLevel+`'
+            print(errorCorrectionLevel)
+            qrcode = segno.make_qr('''`+content+`''',version=version,error=errorCorrectionLevel,mode=mode)
+            import io
+            buff = io.BytesIO()
+            qrcode.save(buff, kind='svg')
+            buff.getvalue().decode("utf-8") 
+          `);
+          console.log(result)
+          let decoded = unescape(encodeURIComponent(result));
+          // Now we can use btoa to convert the svg to base64
+          let base64 = btoa(decoded);
+          let imgSource = `data:image/svg+xml;base64,${base64}`;
+          document.getElementById("qrcode").src = imgSource;
+          return result;
+        } catch (error) {
+          alert(error);
+          throw error;
+        }
       }
     </script>
   </body>
