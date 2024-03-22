@@ -47,6 +47,11 @@
     </label>
     <br/>
     <label>
+      Expected QR Code count for Structed Append mode:
+      <input style="width:50px" type="number" value="2" id="countInput"/>
+    </label>
+    <br/>
+    <label>
       Content:
       <select id="contentSelect">
         <option>Text</option>
@@ -128,6 +133,7 @@
           base64_string = await readFileAsBase64();
         } 
         console.log(base64_string)
+        let count = document.getElementById("countInput").value; 
         let mode = document.getElementById("modeSelect").selectedOptions[0].value;
         let encoding = document.getElementById("encodingSelect").selectedOptions[0].value;
         let version = document.getElementById("versionSelect").selectedOptions[0].value;
@@ -160,7 +166,7 @@
             qrcodes = []
             qrcode_svgs = []
             if mode == "structuredappend":
-                qrcode_seq = segno.make_sequence(content,version=version,error=errorCorrectionLevel, symbol_count=2)
+                qrcode_seq = segno.make_sequence(content,version=version,error=errorCorrectionLevel, symbol_count=`+count+`)
                 for qrcode in qrcode_seq:
                     qrcodes.append(qrcode)
             else:
