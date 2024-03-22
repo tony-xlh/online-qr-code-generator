@@ -88,7 +88,11 @@
         })
 
         document.getElementById("widthInput").addEventListener("change",function(){
-          document.getElementById("qrcode").style.width = this.value + "px";
+          let qrcodes = document.getElementsByClassName("qrcode");
+          for (let index = 0; index < qrcodes.length; index++) {
+            const qrcode = qrcodes[index];
+            qrcode.style.width = this.value + "px";  
+          }
         })
 
         await initPyodide();
