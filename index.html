@@ -120,10 +120,14 @@
       }
       
       async function generateQRCode(){
+        let version = document.getElementById("versionSelect").selectedOptions[0].value;
         let content = document.querySelector("textarea").value;
         let result = await pyodide.runPython(`
           import segno
-          qrcode = segno.make_qr('''`+content+`''')
+          version = `+version+`
+          if version == 0:
+              version = None
+          qrcode = segno.make_qr('''`+content+`''',version=version)
           import io
           buff = io.BytesIO()
           qrcode.save(buff, kind='svg')
