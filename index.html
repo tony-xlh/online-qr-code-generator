@@ -1,0 +1,106 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+  </head>
+  <body>
+    <h2>QR Code Generator</h2>
+    <label>
+      Version:
+      <select id="versionSelect"></select>
+    </label>
+    <label>
+      Error Correction Level
+      <select id="errorCorrectionLevelSelect">
+        <option value="l">L(7%)</option>
+        <option value="m">M(15%)</option>
+        <option value="q">Q(25%)</option>
+        <option value="h">H(30%)</option>
+      </select>
+    </label>
+    <label>
+      Mode:
+      <select id="modeSelect">
+        <option value="numeric">Numeric</option>
+        <option value="alphanumeric">Alphanumeric</option>
+        <option value="kanji">Kanji</option>
+        <option value="byte">Byte</option>
+        <option value="structuredappend">Structrued Append</option>
+      </select>
+    </label>
+    <br/>
+    <label>
+      Text Encoding in Byte Mode:
+      <select id="encodingSelect"></select>
+    </label>
+    <br/>
+    <label>
+      Content:
+      <select id="contentSelect">
+        <option>Text</option>
+        <option>Bytes</option>
+      </select>
+    </label>
+    <br/>
+    <textarea></textarea>
+    <input style="display:none" type="file" id="fileInput"/>
+    <br/>
+    <button>Generate</button>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
+    <script type="text/javascript">
+      let pyodide;
+      window.onload = async function(){
+        loadVersions();
+        loadEncodings();
+        document.getElementById("contentSelect").addEventListener("change",function(){
+          console.log(arguments)
+          if (this.selectedIndex === 0) {
+            document.querySelector("textarea").style.display = "";
+            document.querySelector("#fileInput").style.display = "none";
+          }else{
+            document.querySelector("textarea").style.display = "none";
+            document.querySelector("#fileInput").style.display = "";
+          }
+        })
+        await initPyodide();
+      }
+
+      function loadEncodings(){
+        const encodingSelect = document.getElementById("encodingSelect");
+        const encodings = ["ascii","big5","big5hkscs","cp037","cp273","cp424","cp437","cp500","cp720","cp737","cp775","cp850","cp852","cp855","cp856","cp857","cp858","cp860","cp861","cp862","cp863","cp864","cp865","cp866","cp869","cp874","cp875","cp932","cp949","cp950","cp1006","cp1026","cp1125","cp1140","cp1250","cp1251","cp1252","cp1253","cp1254","cp1255","cp1256","cp1257","cp1258","euc_jp","euc_jis_2004","euc_jisx0213","euc_kr","gb2312","gbk","gb18030","hz","iso2022_jp","iso2022_jp_1","iso2022_jp_2","iso2022_jp_2004","iso2022_jp_3","iso2022_jp_ext","iso2022_kr","latin_1","iso8859_2","iso8859_3","iso8859_4","iso8859_5","iso8859_6","iso8859_7","iso8859_8","iso8859_9","iso8859_10","iso8859_11","iso8859_13","iso8859_14","iso8859_15","iso8859_16","johab","koi8_r","koi8_t","koi8_u","kz1048","mac_cyrillic","mac_greek","mac_iceland","mac_latin2","mac_roman","mac_turkish","ptcp154","shift_jis","shift_jis_2004","shift_jisx0213","utf_32","utf_32_be","utf_32_le","utf_16","utf_16_be","utf_16_le","utf_7","utf_8","utf_8_sig"];
+        for (let index = 0; index < encodings.length; index++) {
+          const encoding = encodings[index];
+          let option = new Option(encoding,encoding);
+          encodingSelect.appendChild(option);
+        }
+      }
+
+      function loadVersions(){
+        const versionSelect = document.getElementById("versionSelect");
+        for (let index = 1; index <= 40; index++) {
+          const option = new Option(index,index);
+          versionSelect.appendChild(option);
+        }
+      }
+
+      async function initPyodide() {
+        pyodide = await loadPyodide();
+        await pyodide.loadPackage("micropip");
+        const micropip = pyodide.pyimport("micropip");
+        await micropip.install("segno");
+      }
+
+      async function generateQRCode(){
+        let result = await pyodide.runPython(`
+          import segno
+          qrcode = segno.make('Rain')
+          import io
+          buff = io.BytesIO()
+          qrcode.save(buff, kind='svg')
+          buff.getvalue().decode("utf-8") 
+        `);
+        return result;
+      }
+      
+    </script>
+  </body>
+</html>
