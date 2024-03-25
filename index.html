@@ -79,6 +79,8 @@
     <input style="display:none" type="file" id="fileInput"/>
     <br/>
     <button id="generateButton">Generate</button>
+    <button id="downloadAsSVGButton">Download as SVG</button>
+    <button id="downloadAsJPEGButton">Download as JPEG</button>
     <div id="status"></div>
     <div id="result"></div>
     <div style="margin-top:2em;">You can use this <a target="_blank" href="https://tony-xlh.github.io/barcode-data-reader/">online QR Code scanner</a> to read the QR codes generated.</div>
@@ -103,6 +105,15 @@
         document.getElementById("generateButton").addEventListener("click",function(){
           generateQRCodes();
         })
+
+        document.getElementById("downloadAsSVGButton").addEventListener("click",function(){
+          downloadAsSVG();
+        })
+
+        document.getElementById("downloadAsJPEGButton").addEventListener("click",function(){
+          downloadAsJPEG();
+        })
+        
 
         document.getElementById("widthInput").addEventListener("change",function(){
           let qrcodes = document.getElementsByClassName("qrcode");
@@ -242,6 +253,45 @@ qrcode_svgs
             reject();
           }
         })
+      }
+
+      function downloadAsJPEG(){
+        downloadQRCodeImages(false);
+      }
+
+      function convertSVGAsJPEG(svg){
+        const canvas = document.createElement("canvas");
+        canvas.width = svg.width;
+        canvas.height = svg.height;
+        const context = canvas.getContext("2d");
+        context.fillStyle = "white";
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(svg, 0, 0, svg.naturalWidth, svg.naturalHeight, 0, 0, canvas.width, canvas.height);
+        return canvas.toDataURL("image/jpeg")
+      }
+
+      function downloadAsSVG(){
+        downloadQRCodeImages(true);
+      }
+
+      function downloadQRCodeImages(isSVG){
+        let resultContainer = document.getElementById("result");
+        let images = resultContainer.getElementsByTagName("img");
+        for (let index = 0; index < images.length; index++) {
+          const image = images[index];
+          let a = document.createElement("a");
+          if (isSVG) {
+            a.href = image.src;
+            a.download = (index+1)+".svg";
+          }else{
+            a.href = convertSVGAsJPEG(image);
+            a.download = (index+1)+".jpg";
+          }
+          a.style.display = "none";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }
       }
     </script>
   </body>
