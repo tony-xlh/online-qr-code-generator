@@ -1,14 +1,30 @@
 <html>
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online QR Code Generator</title>
     <style>
       .qrcode {
-        width:50px;
+        width:150px;
+      }
+
+      .fork {
+        width: 149px;
+        height: 149px;
+      }
+
+
+      @media screen and (max-device-width: 600px){
+        .fork {
+          width: 70px;
+          height: 70px;
+        }
       }
     </style>
   </head>
   <body>
     <h2>QR Code Generator</h2>
+    <a style="position: absolute; right: 0px; top: 0px;" href="https://github.com/tony-xlh/online-qr-code-generator"><img class="fork" width="149" height="149" src="https://github.blog/wp-content/uploads/2008/12/forkme_right_darkblue_121621.png?resize=149%2C149" alt="Fork me on GitHub" data-recalc-dims="1"></a>
     <label>
       Version:
       <select id="versionSelect">
@@ -43,7 +59,7 @@
     </label>
     <label>
       Image Width:
-      <input style="width:50px" type="number" value="50" id="widthInput"/>
+      <input style="width:50px" type="number" value="150" id="widthInput"/>
     </label>
     <br/>
     <label>
@@ -65,6 +81,7 @@
     <button id="generateButton">Generate</button>
     <div id="status"></div>
     <div id="result"></div>
+    <div style="margin-top:2em;">You can use this <a target="_blank" href="https://tony-xlh.github.io/barcode-data-reader/">online QR Code scanner</a> to read the QR codes generated.</div>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
     <script type="text/javascript">
       let pyodide;
@@ -136,54 +153,54 @@
         if (contentIsBytes == 1) {
           base64_string = await readFileAsBase64();
         } 
-        console.log(base64_string)
+
         let count = document.getElementById("countInput").value; 
         let mode = document.getElementById("modeSelect").selectedOptions[0].value;
         let encoding = document.getElementById("encodingSelect").selectedOptions[0].value;
         let version = document.getElementById("versionSelect").selectedOptions[0].value;
         let errorCorrectionLevel = document.getElementById("errorCorrectionLevelSelect").selectedOptions[0].value;
         let content = document.querySelector("textarea").value;
+
         try {
-          let result = await pyodide.runPython(`
-            import base64
-            import segno
-            
-            mode = '`+mode+`'
-            encoding = '`+encoding+`'
-            if mode == "auto":
-                mode = None
-            content = '''`+content+`'''
-            if mode == "byte":
-                content = content.encode(encoding)
+          let code = `
+import base64
+import segno
 
-            base64_string = '''`+base64_string+`'''
-            if base64_string != '':
-                content = base64.b64decode(base64_string)
+mode = '`+mode+`'
+encoding = '`+encoding+`'
+if mode == "auto":
+    mode = None
+content = '''`+content+`'''
+if mode == "byte":
+    content = content.encode(encoding)
 
-            version = `+version+`
-            if version == 0:
-                version = None
-            errorCorrectionLevel = '`+errorCorrectionLevel+`'
-            print(errorCorrectionLevel)
-            print(content)
-            
-            qrcodes = []
-            qrcode_svgs = []
-            if mode == "structuredappend":
-                qrcode_seq = segno.make_sequence(content,version=version,error=errorCorrectionLevel, symbol_count=`+count+`)
-                for qrcode in qrcode_seq:
-                    qrcodes.append(qrcode)
-            else:
-                qrcode = segno.make_qr(content,version=version,error=errorCorrectionLevel,mode=mode)
-                qrcodes.append(qrcode)
-            import io
-            for qrcode in qrcodes:
-                buff = io.BytesIO()
-                qrcode.save(buff, kind='svg')
-                svg = buff.getvalue().decode("utf-8")
-                qrcode_svgs.append(svg)
-            qrcode_svgs
-          `);
+base64_string = '''`+base64_string+`'''
+if base64_string != '':
+    content = base64.b64decode(base64_string)
+
+version = `+version+`
+if version == 0:
+    version = None
+errorCorrectionLevel = '`+errorCorrectionLevel+`'
+
+qrcodes = []
+qrcode_svgs = []
+if mode == "structuredappend":
+    qrcode_seq = segno.make_sequence(content,version=version,error=errorCorrectionLevel, symbol_count=`+count+`)
+    for qrcode in qrcode_seq:
+        qrcodes.append(qrcode)
+else:
+    qrcode = segno.make_qr(content,version=version,error=errorCorrectionLevel,mode=mode)
+    qrcodes.append(qrcode)
+import io
+for qrcode in qrcodes:
+    buff = io.BytesIO()
+    qrcode.save(buff, kind='svg')
+    svg = buff.getvalue().decode("utf-8")
+    qrcode_svgs.append(svg)
+qrcode_svgs
+`;
+          let result = await pyodide.runPython(code);
           let svgs = result.toJs();
           let resultContainer = document.getElementById("result");
           resultContainer.innerHTML = "";
@@ -196,6 +213,7 @@
             let img = document.createElement("img");
             img.src = imgSource;
             img.className = "qrcode"
+            img.style.width = document.getElementById("widthInput").value + "px";
             resultContainer.appendChild(img);
           }
         } catch (error) {
