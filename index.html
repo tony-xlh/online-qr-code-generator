@@ -199,6 +199,7 @@
             let img = document.createElement("img");
             img.src = imgSource;
             img.className = "qrcode"
+            img.style.width = document.getElementById("widthInput").value + "px";
             resultContainer.appendChild(img);
           }
         } catch (error) {
