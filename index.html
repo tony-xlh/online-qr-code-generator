@@ -139,54 +139,54 @@
         if (contentIsBytes == 1) {
           base64_string = await readFileAsBase64();
         } 
-        console.log(base64_string)
+
         let count = document.getElementById("countInput").value; 
         let mode = document.getElementById("modeSelect").selectedOptions[0].value;
         let encoding = document.getElementById("encodingSelect").selectedOptions[0].value;
         let version = document.getElementById("versionSelect").selectedOptions[0].value;
         let errorCorrectionLevel = document.getElementById("errorCorrectionLevelSelect").selectedOptions[0].value;
         let content = document.querySelector("textarea").value;
+
         try {
-          let result = await pyodide.runPython(`
-            import base64
-            import segno
-            
-            mode = '`+mode+`'
-            encoding = '`+encoding+`'
-            if mode == "auto":
-                mode = None
-            content = '''`+content+`'''
-            if mode == "byte":
-                content = content.encode(encoding)
+          let code = `
+import base64
+import segno
 
-            base64_string = '''`+base64_string+`'''
-            if base64_string != '':
-                content = base64.b64decode(base64_string)
+mode = '`+mode+`'
+encoding = '`+encoding+`'
+if mode == "auto":
+    mode = None
+content = '''`+content+`'''
+if mode == "byte":
+    content = content.encode(encoding)
 
-            version = `+version+`
-            if version == 0:
-                version = None
-            errorCorrectionLevel = '`+errorCorrectionLevel+`'
-            print(errorCorrectionLevel)
-            print(content)
-            
-            qrcodes = []
-            qrcode_svgs = []
-            if mode == "structuredappend":
-                qrcode_seq = segno.make_sequence(content,version=version,error=errorCorrectionLevel, symbol_count=`+count+`)
-                for qrcode in qrcode_seq:
-                    qrcodes.append(qrcode)
-            else:
-                qrcode = segno.make_qr(content,version=version,error=errorCorrectionLevel,mode=mode)
-                qrcodes.append(qrcode)
-            import io
-            for qrcode in qrcodes:
-                buff = io.BytesIO()
-                qrcode.save(buff, kind='svg')
-                svg = buff.getvalue().decode("utf-8")
-                qrcode_svgs.append(svg)
-            qrcode_svgs
-          `);
+base64_string = '''`+base64_string+`'''
+if base64_string != '':
+    content = base64.b64decode(base64_string)
+
+version = `+version+`
+if version == 0:
+    version = None
+errorCorrectionLevel = '`+errorCorrectionLevel+`'
+
+qrcodes = []
+qrcode_svgs = []
+if mode == "structuredappend":
+    qrcode_seq = segno.make_sequence(content,version=version,error=errorCorrectionLevel, symbol_count=`+count+`)
+    for qrcode in qrcode_seq:
+        qrcodes.append(qrcode)
+else:
+    qrcode = segno.make_qr(content,version=version,error=errorCorrectionLevel,mode=mode)
+    qrcodes.append(qrcode)
+import io
+for qrcode in qrcodes:
+    buff = io.BytesIO()
+    qrcode.save(buff, kind='svg')
+    svg = buff.getvalue().decode("utf-8")
+    qrcode_svgs.append(svg)
+qrcode_svgs
+`;
+          let result = await pyodide.runPython(code);
           let svgs = result.toJs();
           let resultContainer = document.getElementById("result");
           resultContainer.innerHTML = "";
